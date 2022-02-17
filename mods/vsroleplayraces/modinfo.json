@@ -1,0 +1,11 @@
+{
+  "type": "code",
+  "modid": "vsroleplayraces",
+  "name": "vsroleplayraces",
+  "author": "mixxit",
+  "description": "A vintage story mod that adds roleplay races",
+  "version": "1.16.3-rc.1",
+  "dependency": {
+    "game": ""
+  }
+}
