@@ -63,7 +63,7 @@ namespace vsroleplayraces.src
 
                 if (!(bool)fieldInfo.GetValue(__instance) && byPlayer.PlayerUID == ((ICoreClientAPI)byPlayer.Entity.Api).World.Player.PlayerUID)
                 {
-                    var createCharDlg = new GuiDialogCreateCharacterExtendedBase(((ICoreClientAPI)byPlayer.Entity.Api), __instance);
+                    var createCharDlg = new GuiDialogCreateCharacterExtendedRoleplay(((ICoreClientAPI)byPlayer.Entity.Api), __instance);
                     createCharDlg.PrepAndOpen();
                 }
             }

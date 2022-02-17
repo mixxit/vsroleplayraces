@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -17,6 +18,12 @@ namespace vsroleplayraces.src
         bool didSelect = false;
         protected IInventory characterInv;
         protected ElementBounds insetSlotBounds;
+        int selectedRaceIndex = 0;
+        int selectedTrait1Index = 0;
+        int selectedTrait2Index = 0;
+        int selectedIdealIndex = 0;
+        int selectedFlawIndex = 0;
+        int selectedBondIndex = 0;
 
         Dictionary<EnumCharacterDressType, int> DressPositionByTressType = new Dictionary<EnumCharacterDressType, int>();
         Dictionary<EnumCharacterDressType, ItemStack[]> DressesByDressType = new Dictionary<EnumCharacterDressType, ItemStack[]>();
@@ -31,11 +38,25 @@ namespace vsroleplayraces.src
         bool charNaked = true;
 
         protected int dlgHeight = 433 + 50;
-
+        Dictionary<string, RaceDefaultAppearance> races;
+        List<vsroleplayraces.src.Trait> traits;
+        List<vsroleplayraces.src.Flaw> flaws;
+        List<vsroleplayraces.src.Bond> bonds;
+        List<vsroleplayraces.src.Ideal> ideals;
 
         public GuiDialogCreateCharacterExtendedRoleplay(ICoreClientAPI capi, CharacterSystem modSys) : base(capi)
         {
             this.modSys = modSys;
+            this.races = capi.ModLoader.GetModSystem<VSRoleplayRacesMod>().GetRaces();
+            this.traits = capi.ModLoader.GetModSystem<VSRoleplayRacesMod>().GetTraits();
+            this.flaws = capi.ModLoader.GetModSystem<VSRoleplayRacesMod>().GetFlaws();
+            this.bonds = capi.ModLoader.GetModSystem<VSRoleplayRacesMod>().GetBonds();
+            this.ideals = capi.ModLoader.GetModSystem<VSRoleplayRacesMod>().GetIdeals();
+        }
+
+        public void LoadDefaultRace()
+        {
+            onToggleRace(JsonConvert.SerializeObject(this.races.Values.ToArray()[selectedRaceIndex]), true);
         }
 
         protected void ComposeGuis()
@@ -58,7 +79,7 @@ namespace vsroleplayraces.src
 
 
             GuiTab[] tabs = new GuiTab[] {
-                new GuiTab() { Name = "Skin & Voice", DataInt = 0 },
+                new GuiTab() { Name = "Race", DataInt = 0 },
                 new GuiTab() { Name = "Class", DataInt = 1 },
               //  new GuiTab() { Name = "Outfit", DataInt = 2 }
             };
@@ -67,13 +88,14 @@ namespace vsroleplayraces.src
                 capi.Gui
                 .CreateCompo("createcharacter", dialogBounds)
                 .AddShadedDialogBG(bgBounds, true)
-                .AddDialogTitleBar(curTab == 0 ? Lang.Get("Customize Skin") : (curTab == 1 ? Lang.Get("Select character class") : Lang.Get("Select your outfit")), OnTitleBarClose)
+                .AddDialogTitleBar(curTab == 0 ? Lang.Get("Race") : (curTab == 1 ? Lang.Get("Class") : Lang.Get("Outfit")), OnTitleBarClose)
                 .AddHorizontalTabs(tabs, tabBounds, onTabClicked, CairoFont.WhiteSmallText().WithWeight(Cairo.FontWeight.Bold), CairoFont.WhiteSmallText().WithWeight(Cairo.FontWeight.Bold), "tabs")
                 .BeginChildElements(bgBounds)
             ;
 
             capi.World.Player.Entity.hideClothing = false;
 
+            // RACE
             if (curTab == 0)
             {
                 var skinMod = capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
@@ -99,96 +121,121 @@ namespace vsroleplayraces.src
                     .FixedUnder(insetSlotBounds, 4).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(12, 6)
                 ;
 
-                ElementBounds bounds = null;
-                ElementBounds prevbounds = null;
-
                 double leftX = 0;
+                ElementBounds prevbounds = null;
+                ElementBounds bounds = ElementBounds.Fixed(leftX, (prevbounds == null || prevbounds.fixedY == 0) ? -10 : prevbounds.fixedY + 2, colorIconSize, colorIconSize);
+                Composers["createcharacter"].AddRichtext("Race", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddDropDown(this.races.Values.Select(e => JsonConvert.SerializeObject(e)).ToArray(), this.races.Keys.ToArray(), selectedRaceIndex, (code, selected) => onToggleRace(code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                prevbounds = bounds.FlatCopy();
 
                 foreach (var skinpart in skinMod.AvailableSkinParts)
                 {
-                    bounds = ElementBounds.Fixed(leftX, (prevbounds == null || prevbounds.fixedY == 0) ? -10 : prevbounds.fixedY + 8, colorIconSize, colorIconSize);
+                    bounds = ElementBounds.Fixed(leftX, (prevbounds == null || prevbounds.fixedY == 0) ? -10 : prevbounds.fixedY + 2, colorIconSize, colorIconSize);
 
                     string code = skinpart.Code;
 
                     AppliedSkinnablePartVariant appliedVar = skinMod.AppliedSkinParts.FirstOrDefault(sp => sp.PartCode == code);
 
-
                     if (skinpart.Type == EnumSkinnableType.Texture && !skinpart.UseDropDown)
                     {
-                        int selectedIndex = 0;
-                        int[] colors = new int[skinpart.Variants.Length];
-
-                        for (int i = 0; i < skinpart.Variants.Length; i++)
+                        // We want race to control body colour so do not show baseskin or haircolor
+                        if (!skinpart.Code.Equals("baseskin") && !skinpart.Code.Equals("haircolor"))
                         {
-                            colors[i] = skinpart.Variants[i].Color;
+                            int selectedIndex = 0;
+                            int[] colors = new int[skinpart.Variants.Length];
 
-                            if (appliedVar?.Code == skinpart.Variants[i].Code) selectedIndex = i;
+                            for (int i = 0; i < skinpart.Variants.Length; i++)
+                            {
+                                colors[i] = skinpart.Variants[i].Color;
+
+                                if (appliedVar?.Code == skinpart.Variants[i].Code) selectedIndex = i;
+                            }
+
+                            Composers["createcharacter"].AddRichtext(Lang.Get("skinpart-" + code), CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 22));
+                            Composers["createcharacter"].AddColorListPicker(colors, (index) => onToggleSkinPartColor(code, index), bounds = bounds.BelowCopy(0, 0).WithFixedSize(colorIconSize, colorIconSize), 180, "picker-" + code);
+
+                            for (int i = 0; i < colors.Length; i++)
+                            {
+                                var picker = Composers["createcharacter"].GetColorListPicker("picker-" + code + "-" + i);
+                                picker.ShowToolTip = true;
+                                picker.TooltipText = Lang.Get("color-" + skinpart.Variants[i].Code);
+
+                                //Console.WriteLine("\"" + Lang.Get("color-" + skinpart.Variants[i].Code) + "\": \""+ skinpart.Variants[i].Code + "\"");
+                            }
+
+                            Composers["createcharacter"].ColorListPickerSetValue("picker-" + code, selectedIndex);
                         }
-
-                        Composers["createcharacter"].AddRichtext(Lang.Get("skinpart-" + code), CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 22));
-                        Composers["createcharacter"].AddColorListPicker(colors, (index) => onToggleSkinPartColor(code, index), bounds = bounds.BelowCopy(0, 0).WithFixedSize(colorIconSize, colorIconSize), 180, "picker-" + code);
-
-                        for (int i = 0; i < colors.Length; i++)
-                        {
-                            var picker = Composers["createcharacter"].GetColorListPicker("picker-" + code + "-" + i);
-                            picker.ShowToolTip = true;
-                            picker.TooltipText = Lang.Get("color-" + skinpart.Variants[i].Code);
-
-                            //Console.WriteLine("\"" + Lang.Get("color-" + skinpart.Variants[i].Code) + "\": \""+ skinpart.Variants[i].Code + "\"");
-                        }
-
-                        Composers["createcharacter"].ColorListPickerSetValue("picker-" + code, selectedIndex);
                     }
                     else
                     {
-                        int selectedIndex = 0;
-
-                        string[] names = new string[skinpart.Variants.Length];
-                        string[] values = new string[skinpart.Variants.Length];
-
-                        for (int i = 0; i < skinpart.Variants.Length; i++)
+                        if (!skinpart.Code.Equals("voicetype") && !skinpart.Code.Equals("voicepitch"))
                         {
-                            names[i] = Lang.Get("skinpart-" + code + "-" + skinpart.Variants[i].Code);
-                            values[i] = skinpart.Variants[i].Code;
 
-                            //Console.WriteLine("\"" + names[i] + "\": \"" + skinpart.Variants[i].Code + "\",");
+                            int selectedIndex = 0;
 
-                            if (appliedVar?.Code == values[i]) selectedIndex = i;
+                            string[] names = new string[skinpart.Variants.Length];
+                            string[] values = new string[skinpart.Variants.Length];
+
+                            for (int i = 0; i < skinpart.Variants.Length; i++)
+                            {
+                                names[i] = Lang.Get("skinpart-" + code + "-" + skinpart.Variants[i].Code);
+                                values[i] = skinpart.Variants[i].Code;
+
+                                //Console.WriteLine("\"" + names[i] + "\": \"" + skinpart.Variants[i].Code + "\",");
+
+                                if (appliedVar?.Code == values[i]) selectedIndex = i;
+                            }
+
+
+                            Composers["createcharacter"].AddRichtext(Lang.Get("skinpart-" + code), CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 22));
+
+                            string tooltip = Lang.GetIfExists("skinpartdesc-" + code);
+                            if (tooltip != null)
+                            {
+                                Composers["createcharacter"].AddHoverText(tooltip, CairoFont.WhiteSmallText(), 300, bounds = bounds.FlatCopy());
+                            }
+
+                            Composers["createcharacter"].AddDropDown(values, names, selectedIndex, (variantcode, selected) => onToggleSkinPartColor(code, variantcode), bounds = bounds.BelowCopy(0, 0).WithFixedSize(200, 25), "dropdown-" + code);
                         }
-
-
-                        Composers["createcharacter"].AddRichtext(Lang.Get("skinpart-" + code), CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 22));
-
-                        string tooltip = Lang.GetIfExists("skinpartdesc-" + code);
-                        if (tooltip != null)
-                        {
-                            Composers["createcharacter"].AddHoverText(tooltip, CairoFont.WhiteSmallText(), 300, bounds = bounds.FlatCopy());
-                        }
-
-                        Composers["createcharacter"].AddDropDown(values, names, selectedIndex, (variantcode, selected) => onToggleSkinPartColor(code, variantcode), bounds = bounds.BelowCopy(0, 0).WithFixedSize(200, 25), "dropdown-" + code);
                     }
 
                     prevbounds = bounds.FlatCopy();
 
-                    if (skinpart.Colbreak)
+                    // Eye color is last on left side
+                    if (skinpart.Code.Equals("mustache"))
                     {
                         leftX = insetSlotBounds.fixedX + insetSlotBounds.fixedWidth + 22;
                         prevbounds.fixedY = 0;
                     }
                 }
 
+                Composers["createcharacter"].AddRichtext("Ideal", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddDropDown(this.ideals.Select(e => e.id.ToString()).ToArray(), this.ideals.Select(e => e.description).ToArray(), selectedIdealIndex, (code, selected) => onTogglePersonality("ideal", code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                prevbounds = bounds.FlatCopy();
 
+                Composers["createcharacter"].AddRichtext("Flaw", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddDropDown(this.flaws.Select(e => e.id.ToString()).ToArray(), this.flaws.Select(e => e.description).ToArray(), selectedFlawIndex, (code, selected) => onTogglePersonality("flaw", code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                prevbounds = bounds.FlatCopy();
+
+                Composers["createcharacter"].AddRichtext("Bond", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddDropDown(this.bonds.Select(e => e.id.ToString()).ToArray(), this.bonds.Select(e => e.description).ToArray(), selectedBondIndex, (code, selected) => onTogglePersonality("bond", code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                prevbounds = bounds.FlatCopy();
+
+                Composers["createcharacter"].AddRichtext("Traits", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddDropDown(this.traits.Select(e => e.id.ToString()).ToArray(), this.traits.Select(e => e.description).ToArray(), selectedTrait1Index, (code, selected) => onTogglePersonality("trait1",code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                Composers["createcharacter"].AddDropDown(this.traits.Select(e => e.id.ToString()).ToArray(), this.traits.Select(e => e.description).ToArray(), selectedTrait2Index, (code, selected) => onTogglePersonality("trait2", code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
+                prevbounds = bounds.FlatCopy();
 
                 Composers["createcharacter"]
                     .AddInset(insetSlotBounds, 2)
                     .AddToggleButton(Lang.Get("Show dressed"), smallfont, OnToggleDressOnOff, toggleButtonBounds, "showdressedtoggle")
-                    .AddSmallButton(Lang.Get("Randomize"), OnRandomizeSkin, ElementBounds.Fixed(0, dlgHeight - 30).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(12, 6), EnumButtonStyle.Normal, EnumTextOrientation.Center)
-                    .AddSmallButton(Lang.Get("Confirm Skin"), OnNext, ElementBounds.Fixed(0, dlgHeight - 30).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(12, 6), EnumButtonStyle.Normal, EnumTextOrientation.Center)
+                    .AddSmallButton(Lang.Get("Confirm Race"), OnNext, ElementBounds.Fixed(0, dlgHeight - 30).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(12, 6), EnumButtonStyle.Normal, EnumTextOrientation.Center)
                 ;
 
                 Composers["createcharacter"].GetToggleButton("showdressedtoggle").SetValue(!charNaked);
             }
 
+            // CLASS
             if (curTab == 1)
             {
                 var essr = capi.World.Player.Entity.Properties.Client.Renderer as EntitySkinnableShapeRenderer;
@@ -231,53 +278,6 @@ namespace vsroleplayraces.src
                 changeClass(0);
             }
 
-            /*if (curTab == 2) {
-
-                ElementBounds leftPrevButtonBounds = ElementBounds.Fixed(0, ypos + 52, 19, slotsize - 4).WithFixedPadding(2);
-                ElementBounds leftNextButtonBounds = ElementBounds.Fixed(0, ypos + 52, 19, slotsize - 4).WithFixedPadding(2).FixedRightOf(leftPrevButtonBounds, 6);
-
-                ElementBounds leftSlotBounds = ElementStdBounds.SlotGrid(EnumDialogArea.None, 0, ypos, 1, rows).FixedGrow(2 * pad, 2 * pad).FixedRightOf(leftNextButtonBounds, 8);
-                insetSlotBounds = ElementBounds.Fixed(0, ypos + 25, 220, leftSlotBounds.fixedHeight - 2 * pad - 4 + 25).FixedRightOf(leftSlotBounds, 10);
-                ElementBounds rightSlotBounds = ElementStdBounds.SlotGrid(EnumDialogArea.None, 0, ypos, 1, rows).FixedGrow(2 * pad, 2 * pad).FixedRightOf(insetSlotBounds, 10);
-
-                ElementBounds rightPrevButtonBounds = ElementBounds.Fixed(20, ypos + 1, 19, slotsize - 4).WithFixedPadding(2).FixedRightOf(rightSlotBounds, 6);
-                ElementBounds rightNextButtonBounds = ElementBounds.Fixed(20, ypos + 1, 19, slotsize - 4).WithFixedPadding(2).FixedRightOf(rightPrevButtonBounds, 6);
-
-
-
-                Composers["createcharacter"]
-                    .AddItemSlotGrid(characterInv, SendInvPacket, 1, new int[] { 0, 1, 2, 11, 3, 4 }, leftSlotBounds, "leftSlots")
-
-                        // Shoulder
-                        .AddIconButton("left", (on) => OnPrevious(1), leftPrevButtonBounds.FlatCopy())
-                        .AddIconButton("right", (on) => OnNext(1), leftNextButtonBounds.FlatCopy())
-
-                        // Upper body 
-                        .AddIconButton("left", (on) => OnPrevious(2), leftPrevButtonBounds = leftPrevButtonBounds.BelowCopy(0, 3))
-                        .AddIconButton("right", (on) => OnNext(2), leftNextButtonBounds = leftNextButtonBounds.BelowCopy(0, 3))
-
-                        // Trousers
-                        .AddIconButton("left", (on) => OnPrevious(3), leftPrevButtonBounds = leftPrevButtonBounds.BelowCopy(0, 3).BelowCopy(0, 3))
-                        .AddIconButton("right", (on) => OnNext(3), leftNextButtonBounds = leftNextButtonBounds.BelowCopy(0, 3).BelowCopy(0, 3))
-
-                        // Shoes
-                        .AddIconButton("left", (on) => OnPrevious(4), leftPrevButtonBounds = leftPrevButtonBounds.BelowCopy(0, 3))
-                        .AddIconButton("right", (on) => OnNext(4), leftNextButtonBounds = leftNextButtonBounds.BelowCopy(0, 3))
-
-                        // Gloves (on the right)
-                        //  .AddIconButton("left", (on) => OnPrevious(5), rightPrevButtonBounds = rightPrevButtonBounds.BelowCopy(0, 3).BelowCopy(0, 3).BelowCopy(0, 3).BelowCopy(0, 3))
-                        // .AddIconButton("right", (on) => OnNext(5), rightNextButtonBounds = rightNextButtonBounds.BelowCopy(0, 3).BelowCopy(0, 3).BelowCopy(0, 3).BelowCopy(0, 3))
-
-                        .AddInset(insetSlotBounds, 2)
-                        //.AddItemSlotGrid(characterInv, SendInvPacket, 1, new int[] { 6, 7, 8, 10, 5, 9 }, rightSlotBounds, "rightSlots")
-
-                        .AddSmallButton(Lang.Get("Randomize"), OnRandomizeClothes, ElementBounds.Fixed(0, 0).FixedUnder(rightSlotBounds, 20).WithAlignment(EnumDialogArea.LeftFixed).WithFixedPadding(10, 4), EnumButtonStyle.Normal, EnumTextOrientation.Center)
-                        .AddSmallButton(Lang.Get("Confirm Selection"), OnConfirm, ElementBounds.Fixed(0, 0).FixedUnder(rightSlotBounds, 20).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(10, 4), EnumButtonStyle.Normal, EnumTextOrientation.Center)
-
-                    .EndChildElements()
-                ;
-            }*/
-
 
             var tabElem = Composers["createcharacter"].GetHorizontalTabs("tabs");
             tabElem.unscaledTabSpacing = 20;
@@ -306,6 +306,76 @@ namespace vsroleplayraces.src
         {
             var skinMod = capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
             skinMod.selectSkinPart(partCode, variantCode);
+        }
+
+        private void onTogglePersonality(string type, string idasstring, bool selected)
+        {
+            int value = Convert.ToInt32(idasstring);
+
+            if (type.Equals("bond"))
+            {
+                for (int i = 0; i < this.bonds.Count; i++)
+                {
+                    if (this.bonds.ToArray()[i].id != value)
+                        continue;
+                    selectedBondIndex = i;
+                }
+            }
+            if (type.Equals("trait1"))
+            {
+                for (int i = 0; i < this.traits.Count; i++)
+                {
+                    if (this.traits.ToArray()[i].id != value)
+                        continue;
+                    selectedTrait1Index = i;
+                }
+            }
+            if (type.Equals("trait2"))
+            {
+                for (int i = 0; i < this.traits.Count; i++)
+                {
+                    if (this.traits.ToArray()[i].id != value)
+                        continue;
+                    selectedTrait2Index = i;
+                }
+            }
+            if (type.Equals("ideal"))
+            {
+                for (int i = 0; i < this.ideals.Count; i++)
+                {
+                    if (this.ideals.ToArray()[i].id != value)
+                        continue;
+                    selectedIdealIndex = i;
+                }
+            }
+            if (type.Equals("flaw"))
+            {
+                for (int i = 0; i < this.flaws.Count; i++)
+                {
+                    if (this.flaws.ToArray()[i].id != value)
+                        continue;
+                    selectedFlawIndex = i;
+                }
+            }
+        }
+
+        private void onToggleRace(string raceDefaultAppearanceAsJson, bool selected)
+        {
+            var raceDefaultAppearance = JsonConvert.DeserializeObject<RaceDefaultAppearance>(raceDefaultAppearanceAsJson);
+            for (int i = 0; i < this.races.Values.Count; i++)
+            {
+                if (!this.races.Values.ToArray()[i].raceCode.Equals(raceDefaultAppearance.raceCode))
+                    continue;
+                selectedRaceIndex = i;
+            }
+
+            onToggleSkinPartColor("baseskin", raceDefaultAppearance.bodyCode);
+            onToggleSkinPartColor("hairbase", raceDefaultAppearance.hairBase);
+            onToggleSkinPartColor("haircolor", raceDefaultAppearance.hairColor);
+            onToggleSkinPartColor("mustache", raceDefaultAppearance.mustache);
+            onToggleSkinPartColor("beard", raceDefaultAppearance.beard);
+            onToggleSkinPartColor("hairextra", raceDefaultAppearance.hairExtra);
+            ComposeGuis();
         }
 
         private void onToggleSkinPartColor(string partCode, int index)
@@ -343,6 +413,7 @@ namespace vsroleplayraces.src
             }
 
             ComposeGuis();
+            LoadDefaultRace();
             var essr = capi.World.Player.Entity.Properties.Client.Renderer as EntitySkinnableShapeRenderer;
             essr.TesselateShape();
 
@@ -364,11 +435,42 @@ namespace vsroleplayraces.src
 
             CharacterClass chclass = modSys.characterClasses[currentClassIndex];
 
+            modSys.ClientRaceSelectionDone(this.capi, GetCurrentRaceName(), GetCurrentIdealId(), GetCurrentTrait1Id(), GetCurrentTrait2Id(), GetCurrentFlawId(), GetCurrentBondId());
             modSys.ClientSelectionDone(characterInv, chclass.Code, didSelect);
 
             capi.World.Player.Entity.hideClothing = false;
             var essr = capi.World.Player.Entity.Properties.Client.Renderer as EntitySkinnableShapeRenderer;
             essr.TesselateShape();
+        }
+
+        private string GetCurrentRaceName()
+        {
+            return this.races.Values.ToArray()[selectedRaceIndex].raceCode;
+        }
+
+        private int GetCurrentIdealId()
+        {
+            return this.ideals.ToArray()[selectedIdealIndex].id;
+        }
+
+        private int GetCurrentTrait1Id()
+        {
+            return this.traits.ToArray()[selectedTrait1Index].id;
+        }
+
+        private int GetCurrentTrait2Id()
+        {
+            return this.traits.ToArray()[selectedTrait2Index].id;
+        }
+
+        private int GetCurrentFlawId()
+        {
+            return this.traits.ToArray()[selectedFlawIndex].id;
+        }
+
+        private int GetCurrentBondId()
+        {
+            return this.traits.ToArray()[selectedBondIndex].id;
         }
 
         private bool OnConfirm()
@@ -386,47 +488,6 @@ namespace vsroleplayraces.src
         {
             capi.Network.SendPacketClient(packet);
         }
-
-        private bool OnRandomizeSkin()
-        {
-            var skinMod = capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
-
-            var essr = capi.World.Player.Entity.Properties.Client.Renderer as EntitySkinnableShapeRenderer;
-            essr.doReloadShapeAndSkin = false;
-
-            foreach (var skinpart in skinMod.AvailableSkinParts)
-            {
-
-                int index = capi.World.Rand.Next(skinpart.Variants.Length);
-
-                if ((skinpart.Code == "mustache" || skinpart.Code == "beard") && capi.World.Rand.NextDouble() < 0.5)
-                {
-                    index = 0;
-                }
-
-                string variantCode = skinpart.Variants[index].Code;
-
-                skinMod.selectSkinPart(skinpart.Code, variantCode);
-
-                string code = skinpart.Code;
-
-                if (skinpart.Type == EnumSkinnableType.Texture && !skinpart.UseDropDown)
-                {
-                    Composers["createcharacter"].ColorListPickerSetValue("picker-" + code, index);
-                }
-                else
-                {
-                    Composers["createcharacter"].GetDropDown("dropdown-" + code).SetSelectedIndex(index);
-                }
-            }
-
-            essr.doReloadShapeAndSkin = true;
-            essr.TesselateShape();
-
-            return true;
-        }
-
-
 
         void changeClass(int dir)
         {
