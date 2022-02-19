@@ -451,7 +451,15 @@ namespace vsroleplayraces.src
             var existingRace = fromPlayer.Entity.WatchedAttributes.GetString("racename");
             if (String.IsNullOrEmpty(existingRace) && this.races.Values.Select(e => e.raceCode).Contains(networkMessage.RaceName))
             {
-                fromPlayer.Entity.WatchedAttributes.SetString("racename", networkMessage.RaceName);
+                var race = this.races.Values.FirstOrDefault(e => e.raceCode.Equals(networkMessage.RaceName));
+                fromPlayer.Entity.WatchedAttributes.SetString("racename", race.raceCode);
+                fromPlayer.Entity.WatchedAttributes.SetInt("basestr", race.strength);
+                fromPlayer.Entity.WatchedAttributes.SetInt("basesta", race.stamina);
+                fromPlayer.Entity.WatchedAttributes.SetInt("baseagi", race.agility);
+                fromPlayer.Entity.WatchedAttributes.SetInt("basedex", race.dexterity);
+                fromPlayer.Entity.WatchedAttributes.SetInt("baseint", race.intelligence);
+                fromPlayer.Entity.WatchedAttributes.SetInt("basewis", race.wisdom);
+                fromPlayer.Entity.WatchedAttributes.SetInt("basecha", race.charisma);
             }
 
             var existingIdeal = fromPlayer.Entity.WatchedAttributes.GetInt("ideal");
