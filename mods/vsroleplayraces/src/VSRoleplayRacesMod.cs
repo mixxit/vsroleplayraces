@@ -12,7 +12,7 @@ namespace vsroleplayraces.src
 {
     public class VSRoleplayRacesMod : ModSystem
     {
-        Dictionary<string, RaceDefaultAppearance> races = new Dictionary<string, RaceDefaultAppearance>();
+        Dictionary<string, RaceDefaultSettings> races = new Dictionary<string, RaceDefaultSettings>();
         List<vsroleplayraces.src.Trait> traits = new List<vsroleplayraces.src.Trait>();
         List<vsroleplayraces.src.Flaw> flaws = new List<vsroleplayraces.src.Flaw>();
         List<vsroleplayraces.src.Bond> bonds = new List<vsroleplayraces.src.Bond>();
@@ -42,11 +42,11 @@ namespace vsroleplayraces.src
         private void SetupRaces()
         {
             this.races.Clear();
-            this.races.Add("human", new RaceDefaultAppearance() { raceCode = "human", bodyCode = "skin11", hairBase = "shortspiky", hairColor = 17, mustache = "none", beard = "none", hairExtra = "none" });
-            this.races.Add("darkelf", new RaceDefaultAppearance() { raceCode = "darkelf", bodyCode = "skin4", hairBase = "combed", hairColor = 0, mustache = "none", beard = "none", hairExtra = "none" });
-            this.races.Add("orc", new RaceDefaultAppearance() { raceCode = "orc", bodyCode = "skin20", hairBase = "iroquois", hairColor = 2, mustache = "none", beard = "none", hairExtra = "none" });
-            this.races.Add("highelf", new RaceDefaultAppearance() { raceCode = "highelf", bodyCode = "skin9", hairBase = "longwithstrands", hairColor = 1, mustache = "none", beard = "none", hairExtra = "none" });
-            this.races.Add("vampire", new RaceDefaultAppearance() { raceCode = "vampire", bodyCode = "skin15", hairBase = "longflowing", hairColor = 13, mustache = "none", beard = "none", hairExtra = "none" });
+            this.races.Add("human", new RaceDefaultSettings() { raceCode = "human", bodyCode = "skin11", hairBase = "shortspiky", hairColor = 17, mustache = "none", beard = "none", hairExtra = "none", strength = 85, stamina = 85, agility = 80, dexterity = 75, intelligence = 75, wisdom = 75, charisma = 75, alignment = AlignmentType.Neutral, description = "The Meroei are a human like race of the lands of Halcron. If any race could be described as the lords of Solinia it would be the Meroei. Their grand capitals and trading posts span all four corners of the known world" });
+            this.races.Add("darkelf", new RaceDefaultSettings() { raceCode = "darkelf", bodyCode = "skin4", hairBase = "combed", hairColor = 0, mustache = "none", beard = "none", hairExtra = "none", strength = 70, stamina = 70, agility = 90, dexterity = 75, intelligence = 109, wisdom = 83, charisma = 65, alignment = AlignmentType.Evil, description = "A twisted visage of an elf created through injection of vampiric blood into an elf. This former vampiric slave experiment was a total failure and the now freed Dark Elves see themselves as elevated beings far superior to their Mysmaal and Vishim counterparts" });
+            this.races.Add("orc", new RaceDefaultSettings() { raceCode = "orc", bodyCode = "skin20", hairBase = "iroquois", hairColor = 2, mustache = "none", beard = "none", hairExtra = "none", strength = 140, stamina = 127, agility = 70, dexterity = 80, intelligence = 60, wisdom = 67, charisma = 37, alignment = AlignmentType.Evil, description = "Originally descended from the legendary Eusebian hero, Lord Erebus, this corrupted race are dedicated to war and destruction which, despite their low intelligence, they have been quite successful at" });
+            this.races.Add("highelf", new RaceDefaultSettings() { raceCode = "highelf", bodyCode = "skin9", hairBase = "longwithstrands", hairColor = 1, mustache = "none", beard = "none", hairExtra = "none", strength = 65, stamina = 70, agility = 85, dexterity = 70, intelligence = 92, wisdom = 100, charisma = 90, alignment = AlignmentType.Good, description = "The High Elven Vishim of Ravenholme on Asgarad have left their mark on the world as masters over the sea and skilled politicans. Their skin shines with a translucent shimmer a reminder of a long distant past that many have forgotten" });
+            this.races.Add("vampire", new RaceDefaultSettings() { raceCode = "vampire", bodyCode = "skin15", hairBase = "longflowing", hairColor = 13, mustache = "none", beard = "none", hairExtra = "none", strength = 70, stamina = 70, agility = 90, dexterity = 75, intelligence = 109, wisdom = 83, charisma = 65, alignment = AlignmentType.Evil, description = "Atop the The Crimson Throne of Val`Elsir sits the everliving Vampire houses of Taon. Worshippers of Somnus and Deuzulus the great houses of this mysterious race have been in a civil war almost since their creation" });
         }
 
         private void SetIdeals()
@@ -407,7 +407,7 @@ namespace vsroleplayraces.src
             this.traits.Add(new Trait(104, "I bluntly say what other people are hinting or hiding."));
         }
 
-        internal Dictionary<string, RaceDefaultAppearance> GetRaces()
+        internal Dictionary<string, RaceDefaultSettings> GetRaces()
         {
             return this.races;
         }
