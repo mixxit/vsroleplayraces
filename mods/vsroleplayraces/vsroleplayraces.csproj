@@ -85,6 +85,7 @@
     <Compile Include="src\Foundation\Extensions\ApiExtensions.cs" />
     <Compile Include="src\Foundation\Extensions\CharacterSystemExt.cs" />
     <Compile Include="src\Ideal.cs" />
+    <Compile Include="src\PlayerNameUtils.cs" />
     <Compile Include="src\RaceSelectionPacket.cs" />
     <Compile Include="src\GuiDialogCreateCharacterExtendedRoleplay.cs" />
     <Compile Include="src\RaceDefaultSettings.cs" />

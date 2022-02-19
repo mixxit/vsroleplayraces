@@ -7,6 +7,7 @@ using Foundation.Extensions;
 using vsroleplayraces.src.Foundation.Extensions;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace vsroleplayraces.src
 {
@@ -19,6 +20,7 @@ namespace vsroleplayraces.src
         List<vsroleplayraces.src.Ideal> ideals = new List<vsroleplayraces.src.Ideal>();
 
         private ICoreAPI api;
+
         public override void StartPre(ICoreAPI api)
         {
             VSRoleplayRacesModConfigFile.Current = api.LoadOrCreateConfig<VSRoleplayRacesModConfigFile>(typeof(VSRoleplayRacesMod).Name + ".json");
@@ -461,6 +463,9 @@ namespace vsroleplayraces.src
                 fromPlayer.Entity.WatchedAttributes.SetInt("basewis", race.wisdom);
                 fromPlayer.Entity.WatchedAttributes.SetInt("basecha", race.charisma);
             }
+
+            fromPlayer.Entity.WatchedAttributes.SetString("roleplayForename", String.IsNullOrEmpty(networkMessage.RoleplayForename) || !Regex.IsMatch(networkMessage.RoleplayForename, @"^[a-z]+$") ? PlayerNameUtils.CleanupRoleplayName(fromPlayer.PlayerName) : networkMessage.RoleplayForename);
+            fromPlayer.Entity.WatchedAttributes.SetString("roleplaySurname", String.IsNullOrEmpty(networkMessage.RoleplaySurname) || !Regex.IsMatch(networkMessage.RoleplaySurname, @"^[a-z]+$") ? "" : networkMessage.RoleplaySurname);
 
             var existingIdeal = fromPlayer.Entity.WatchedAttributes.GetInt("ideal");
             if (String.IsNullOrEmpty(existingRace) && this.ideals.Select(e => e.id).Contains(networkMessage.IdealId))

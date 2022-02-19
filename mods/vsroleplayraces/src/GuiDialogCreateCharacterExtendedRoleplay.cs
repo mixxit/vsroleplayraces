@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Vintagestory.API.Client;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
@@ -216,6 +217,15 @@ namespace vsroleplayraces.src
                 ElementBounds prevbounds = null;
                 ElementBounds bounds = ElementBounds.Fixed(leftX, (prevbounds == null || prevbounds.fixedY == 0) ? -10 : prevbounds.fixedY + 2, colorIconSize, colorIconSize);
 
+                Composers["createcharacter"].AddRichtext("Roleplay Forename:", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddTextInput(bounds = bounds.BelowCopy(0, 10), (name) => onForenameChanged(name), CairoFont.WhiteSmallText(), "text-forename");
+
+                prevbounds = bounds.FlatCopy();
+                Composers["createcharacter"].AddRichtext("Roleplay Surname:", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddTextInput(bounds = bounds.BelowCopy(0, 10), (name) => onSurnameChanged(name), CairoFont.WhiteSmallText(), "text-surname");
+
+                prevbounds = bounds.FlatCopy();
+
                 foreach (var skinpart in skinMod.AvailableSkinParts)
                 {
                     bounds = ElementBounds.Fixed(leftX, (prevbounds == null || prevbounds.fixedY == 0) ? -10 : prevbounds.fixedY + 2, colorIconSize, colorIconSize);
@@ -295,8 +305,7 @@ namespace vsroleplayraces.src
 
                     prevbounds = bounds.FlatCopy();
 
-                    // Eye color is last on left side
-                    if (skinpart.Code.Equals("mustache"))
+                    if (skinpart.Code.Equals("hairextra"))
                     {
                         leftX = insetSlotBounds.fixedX + insetSlotBounds.fixedWidth + 22;
                         prevbounds.fixedY = 0;
@@ -310,6 +319,9 @@ namespace vsroleplayraces.src
                 ;
 
                 Composers["createcharacter"].GetToggleButton("showdressedtoggle").SetValue(!charNaked);
+
+                Composers["createcharacter"].GetTextInput("text-forename").SetValue(this.currentForename);
+                Composers["createcharacter"].GetTextInput("text-surname").SetValue(this.currentSurname);
             }
 
             // PROFESSION
@@ -368,6 +380,28 @@ namespace vsroleplayraces.src
                 Composers["createcharacter"].GetSlotGrid("leftSlots").CanClickSlot = (slotid) => { return false; };
                 //Composers["createcharacter"].GetSlotGrid("rightSlots").CanClickSlot = (slotid) => { return false; };
             }*/
+        }
+
+        private void onSurnameChanged(string name)
+        {
+            if (!String.IsNullOrEmpty(name) && (!Regex.IsMatch(name, @"^[a-z]+$") || name.Length > 8))
+            {
+                Composers["createcharacter"].GetTextInput("text-surname").SetValue(this.currentSurname);
+                return;
+            }
+
+            this.currentSurname = name;
+        }
+
+        private void onForenameChanged(string name)
+        {
+            if (!String.IsNullOrEmpty(name) && (!Regex.IsMatch(name, @"^[a-z]+$") || name.Length > 8))
+            {
+                Composers["createcharacter"].GetTextInput("text-forename").SetValue(this.currentForename);
+                return;
+            }
+
+            this.currentForename = name;
         }
 
         private void OnToggleDressOnOff(bool on)
@@ -537,7 +571,7 @@ namespace vsroleplayraces.src
 
             CharacterClass chclass = modSys.characterClasses[currentClassIndex];
 
-            modSys.ClientRaceSelectionDone(this.capi, GetCurrentRace().bodyCode, GetCurrentIdealId(), GetCurrentTrait1Id(), GetCurrentTrait2Id(), GetCurrentFlawId(), GetCurrentBondId());
+            modSys.ClientRaceSelectionDone(this.capi, GetCurrentRace().bodyCode, GetCurrentIdealId(), GetCurrentTrait1Id(), GetCurrentTrait2Id(), GetCurrentFlawId(), GetCurrentBondId(), this.currentForename, this.currentSurname);
             modSys.ClientSelectionDone(characterInv, chclass.Code, didSelect);
 
             capi.World.Player.Entity.hideClothing = false;
@@ -652,6 +686,8 @@ namespace vsroleplayraces.src
 
         public void PrepAndOpen()
         {
+            this.currentForename = PlayerNameUtils.CleanupRoleplayName(capi.World.Player.PlayerName.ToLower());
+            this.currentSurname = "";
             GatherDresses(EnumCharacterDressType.Foot);
             GatherDresses(EnumCharacterDressType.Hand);
             GatherDresses(EnumCharacterDressType.Shoulder);
@@ -743,6 +779,8 @@ namespace vsroleplayraces.src
 
         Vec4f lighPos = new Vec4f(-1, -1, 0, 0).NormalizeXYZ();
         Matrixf mat = new Matrixf();
+        private string currentSurname;
+        private string currentForename;
 
         public override void OnRenderGUI(float deltaTime)
         {

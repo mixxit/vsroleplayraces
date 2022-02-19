@@ -11,5 +11,7 @@ namespace vsroleplayraces.src
         public int Trait2Id;
         public int FlawId;
         public int BondId;
+        public string RoleplayForename;
+        public string RoleplaySurname;
     }
 }

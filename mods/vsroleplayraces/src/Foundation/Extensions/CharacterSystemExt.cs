@@ -14,7 +14,7 @@ namespace vsroleplayraces.src.Foundation.Extensions
             dynMethod.Invoke(modSys, new object[] { characterInv, characterClass, didSelect });
         }
 
-        public static void ClientRaceSelectionDone(this CharacterSystem modSys, ICoreClientAPI coreClientApi, string raceName, int idealid, int trait1id, int trait2id, int flawid, int  bondid)
+        public static void ClientRaceSelectionDone(this CharacterSystem modSys, ICoreClientAPI coreClientApi, string raceName, int idealid, int trait1id, int trait2id, int flawid, int  bondid, string roleplayForename, string roleplaySurname)
         {
             coreClientApi.Network.GetChannel("raceselection").SendPacket(new RaceSelectionPacket()
             {
@@ -23,8 +23,10 @@ namespace vsroleplayraces.src.Foundation.Extensions
                 Trait1Id = trait1id,
                 Trait2Id = trait2id,
                 FlawId = flawid,
-                BondId = bondid
-            });
+                BondId = bondid,
+                RoleplayForename = roleplayForename,
+                RoleplaySurname = roleplaySurname
+            }) ;
         }
     }
 }
