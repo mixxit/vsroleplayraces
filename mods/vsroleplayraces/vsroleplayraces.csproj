@@ -87,7 +87,6 @@
     <Compile Include="src\Ideal.cs" />
     <Compile Include="src\RaceSelectionPacket.cs" />
     <Compile Include="src\GuiDialogCreateCharacterExtendedRoleplay.cs" />
-    <Compile Include="src\GuiDialogCreateCharacterExtendedBase.cs" />
     <Compile Include="src\RaceDefaultSettings.cs" />
     <Compile Include="src\Trait.cs" />
     <Compile Include="src\VSRoleplayRacesMod.cs" />

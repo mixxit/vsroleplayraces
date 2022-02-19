@@ -95,7 +95,7 @@ namespace vsroleplayraces.src
             ;
 
             capi.World.Player.Entity.hideClothing = false;
-
+            var currentRace = GetCurrentRace();
             // PERSONALITY
             if (curTab == 0)
             {
@@ -130,8 +130,6 @@ namespace vsroleplayraces.src
                 Composers["createcharacter"].AddDropDown(this.races.Values.Select(e => JsonConvert.SerializeObject(e)).ToArray(), this.races.Keys.ToArray(), selectedRaceIndex, (code, selected) => onToggleRace(code, selected), bounds = bounds.BelowCopy(0, 10).WithFixedSize(200, 22));
                 prevbounds = bounds.FlatCopy();
 
-                var currentRace = GetCurrentRace();
-
                 Composers["createcharacter"].AddRichtext("Strength: " + currentRace.strength, CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
                 prevbounds = bounds.FlatCopy();
                 Composers["createcharacter"].AddRichtext("Stamina:" + currentRace.stamina, CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
@@ -147,9 +145,7 @@ namespace vsroleplayraces.src
                 Composers["createcharacter"].AddRichtext("Charisma:" + currentRace.charisma, CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
                 prevbounds = bounds.FlatCopy();
 
-                Composers["createcharacter"].AddRichtext("Description: ", CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
-                prevbounds = bounds.FlatCopy();
-                Composers["createcharacter"].AddRichtext(currentRace.description, CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
+                Composers["createcharacter"].AddRichtext("Description: " + currentRace.description, CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 18));
                 prevbounds = bounds.FlatCopy();
 
                 leftX = insetSlotBounds.fixedX + insetSlotBounds.fixedWidth + 22;
@@ -230,31 +226,37 @@ namespace vsroleplayraces.src
 
                     if (skinpart.Type == EnumSkinnableType.Texture && !skinpart.UseDropDown)
                     {
-                        // We want race to control body colour so do not show baseskin or haircolor
-                        if (!skinpart.Code.Equals("baseskin") && !skinpart.Code.Equals("haircolor"))
+                        // We want race to control body colour so do not show baseskin
+                        if (!skinpart.Code.Equals("baseskin"))
                         {
                             int selectedIndex = 0;
                             int[] colors = new int[skinpart.Variants.Length];
+                            if (skinpart.Code.Equals("haircolor"))
+                                colors = new int[currentRace.allowedHairColors.Length];
 
-                            for (int i = 0; i < skinpart.Variants.Length; i++)
+                            int cacheIndex = 0;
+                            for (int variantIndex = 0; variantIndex < skinpart.Variants.Length; variantIndex++)
                             {
-                                colors[i] = skinpart.Variants[i].Color;
+                                if (skinpart.Code.Equals("haircolor") && !currentRace.allowedHairColors.Contains(skinpart.Variants[variantIndex].Color))
+                                    continue;
 
-                                if (appliedVar?.Code == skinpart.Variants[i].Code) selectedIndex = i;
+                                colors[cacheIndex] = skinpart.Variants[variantIndex].Color;
+                                cacheIndex++;
+
+                                if (appliedVar?.Code == skinpart.Variants[variantIndex].Code) 
+                                    selectedIndex = cacheIndex;
                             }
 
                             Composers["createcharacter"].AddRichtext(Lang.Get("skinpart-" + code), CairoFont.WhiteSmallText(), bounds = bounds.BelowCopy(0, 10).WithFixedSize(210, 22));
-                            Composers["createcharacter"].AddColorListPicker(colors, (index) => onToggleSkinPartColor(code, index), bounds = bounds.BelowCopy(0, 0).WithFixedSize(colorIconSize, colorIconSize), 180, "picker-" + code);
 
-                            for (int i = 0; i < colors.Length; i++)
+                            Composers["createcharacter"].AddColorListPicker(colors, (index) => onToggleSkinPartColorByIndex(code, index), bounds = bounds.BelowCopy(0, 0).WithFixedSize(colorIconSize, colorIconSize), 180, "picker-" + code);
+
+                            for (int cacheIndexForHint = 0; cacheIndexForHint < colors.Length; cacheIndexForHint++)
                             {
-                                var picker = Composers["createcharacter"].GetColorListPicker("picker-" + code + "-" + i);
+                                var picker = Composers["createcharacter"].GetColorListPicker("picker-" + code + "-" + cacheIndexForHint);
                                 picker.ShowToolTip = true;
-                                picker.TooltipText = Lang.Get("color-" + skinpart.Variants[i].Code);
-
-                                //Console.WriteLine("\"" + Lang.Get("color-" + skinpart.Variants[i].Code) + "\": \""+ skinpart.Variants[i].Code + "\"");
+                                picker.TooltipText = Lang.Get("color-" + skinpart.Variants.FirstOrDefault(e => e.Color == colors[cacheIndexForHint]).Code);
                             }
-
                             Composers["createcharacter"].ColorListPickerSetValue("picker-" + code, selectedIndex);
                         }
                     }
@@ -304,7 +306,7 @@ namespace vsroleplayraces.src
                 Composers["createcharacter"]
                     .AddInset(insetSlotBounds, 2)
                     .AddToggleButton(Lang.Get("Show dressed"), smallfont, OnToggleDressOnOff, toggleButtonBounds, "showdressedtoggle")
-                    .AddSmallButton(Lang.Get("Confirm Race"), OnNextButtonInRaceWindow, ElementBounds.Fixed(0, dlgHeight - 30).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(12, 6), EnumButtonStyle.Normal, EnumTextOrientation.Center)
+                    .AddSmallButton(Lang.Get("Confirm Appearance"), OnNextButtonInRaceWindow, ElementBounds.Fixed(0, dlgHeight - 30).WithAlignment(EnumDialogArea.RightFixed).WithFixedPadding(12, 6), EnumButtonStyle.Normal, EnumTextOrientation.Center)
                 ;
 
                 Composers["createcharacter"].GetToggleButton("showdressedtoggle").SetValue(!charNaked);
@@ -445,15 +447,34 @@ namespace vsroleplayraces.src
 
             onToggleSkinPartColor("baseskin", raceDefaultAppearance.bodyCode);
             onToggleSkinPartColor("hairbase", raceDefaultAppearance.hairBase);
-            onToggleSkinPartColor("haircolor", raceDefaultAppearance.hairColor);
+            onToggleSkinPartColorByColor("haircolor", raceDefaultAppearance.defaultHairColor);
             onToggleSkinPartColor("mustache", raceDefaultAppearance.mustache);
             onToggleSkinPartColor("beard", raceDefaultAppearance.beard);
             onToggleSkinPartColor("hairextra", raceDefaultAppearance.hairExtra);
             ComposeGuis();
         }
 
-        private void onToggleSkinPartColor(string partCode, int index)
+        private void onToggleSkinPartColorByColor(string partCode, int color)
         {
+            var skinMod = capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
+
+            string variantCode = skinMod.AvailableSkinPartsByCode[partCode].Variants.FirstOrDefault(e => e.Color == color).Code;
+
+            skinMod.selectSkinPart(partCode, variantCode);
+        }
+
+        private void onToggleSkinPartColorByIndex(string partCode, int index)
+        {
+            if (partCode.Equals("haircolor"))
+            {
+                var picker = Composers["createcharacter"].GetColorListPicker("picker-" + partCode + "-" + index);
+                FieldInfo fieldInfo = typeof(GuiElementColorListPicker).GetField("color", BindingFlags.NonPublic |
+                                              BindingFlags.Instance);
+
+                onToggleSkinPartColorByColor(partCode,(int)fieldInfo.GetValue(picker));
+                return;
+            }
+
             var skinMod = capi.World.Player.Entity.GetBehavior<EntityBehaviorExtraSkinnable>();
 
             string variantCode = skinMod.AvailableSkinPartsByCode[partCode].Variants[index].Code;
