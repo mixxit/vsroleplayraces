@@ -8,6 +8,8 @@ using vsroleplayraces.src.Foundation.Extensions;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Vintagestory.API.Common.Entities;
+using Vintagestory.API.Datastructures;
 
 namespace vsroleplayraces.src
 {
@@ -39,6 +41,27 @@ namespace vsroleplayraces.src
             api.Network
                 .RegisterChannel("raceselection")
                 .RegisterMessageType<RaceSelectionPacket>();
+
+            api.Event.OnEntitySpawn += OnEntitySpawn;
+        }
+
+        public override void StartClientSide(ICoreClientAPI api)
+        {
+            base.StartClientSide(api);
+            api.Event.PlayerJoin += OnPlayerJoinedClient;
+        }
+
+        public override void StartServerSide(ICoreServerAPI api)
+        {
+            base.StartServerSide(api);
+
+            api.Network.GetChannel("raceselection")
+                .SetMessageHandler<RaceSelectionPacket>(onRaceSelection)
+
+            ;
+
+            api.Event.PlayerJoin += OnPlayerJoinedServer;
+            
         }
 
         private void SetupRaces()
@@ -409,6 +432,43 @@ namespace vsroleplayraces.src
             this.traits.Add(new Trait(104, "I bluntly say what other people are hinting or hiding."));
         }
 
+        private void OnPlayerJoinedServer(IServerPlayer player)
+        {
+            RegisterPlayerNameChangedListener((EntityPlayer)player.Entity);
+            TryUpdatePlayerEntityName((EntityPlayer)player.Entity);
+        }
+
+        private void OnPlayerJoinedClient(IClientPlayer player)
+        {
+            RegisterPlayerNameChangedListener((EntityPlayer)player.Entity);
+            TryUpdatePlayerEntityName((EntityPlayer)player.Entity);
+        }
+
+        private void RegisterPlayerNameChangedListener(EntityPlayer entity)
+        {
+            entity.WatchedAttributes.RegisterModifiedListener("roleplayForename", (System.Action)(() => OnPlayerNameChanged(entity)));
+            entity.WatchedAttributes.RegisterModifiedListener("roleplaySurname", (System.Action)(() => OnPlayerNameChanged(entity)));
+        }
+
+        private void OnEntitySpawn(Entity entity)
+        {
+            if (entity is EntityPlayer)
+                TryUpdatePlayerEntityName((EntityPlayer)entity);
+        }
+
+        // Client and server side
+        private void OnPlayerNameChanged(EntityPlayer player)
+        {
+            TryUpdatePlayerEntityName(player);
+        }
+
+        private void TryUpdatePlayerEntityName(EntityPlayer player)
+        {
+            if (player.GetBehavior<EntityBehaviorNameTag>().DisplayName != PlayerNameUtils.GetFullRoleplayNameAsDisplayFormat(player))
+                player.GetBehavior<EntityBehaviorNameTag>().SetName(PlayerNameUtils.GetFullRoleplayNameAsDisplayFormat(player)); 
+
+        }
+                
         internal Dictionary<string, RaceDefaultSettings> GetRaces()
         {
             return this.races;
@@ -434,19 +494,6 @@ namespace vsroleplayraces.src
             return this.ideals;
         }
 
-
-        public override void StartClientSide(ICoreClientAPI api)
-        {
-            base.StartClientSide(api);
-        }
-
-        public override void StartServerSide(ICoreServerAPI api)
-        {
-            base.StartServerSide(api);
-            api.Network.GetChannel("raceselection")
-                .SetMessageHandler<RaceSelectionPacket>(onRaceSelection)
-            ;
-        }
 
         private void onRaceSelection(IServerPlayer fromPlayer, RaceSelectionPacket networkMessage)
         {
