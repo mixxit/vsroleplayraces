@@ -571,7 +571,7 @@ namespace vsroleplayraces.src
 
             CharacterClass chclass = modSys.characterClasses[currentClassIndex];
 
-            modSys.ClientRaceSelectionDone(this.capi, GetCurrentRace().bodyCode, GetCurrentIdealId(), GetCurrentTrait1Id(), GetCurrentTrait2Id(), GetCurrentFlawId(), GetCurrentBondId(), this.currentForename, this.currentSurname);
+            modSys.ClientRaceSelectionDone(this.capi, GetCurrentRace().raceCode, GetCurrentIdealId(), GetCurrentTrait1Id(), GetCurrentTrait2Id(), GetCurrentFlawId(), GetCurrentBondId(), this.currentForename, this.currentSurname);
             modSys.ClientSelectionDone(characterInv, chclass.Code, didSelect);
 
             capi.World.Player.Entity.hideClothing = false;

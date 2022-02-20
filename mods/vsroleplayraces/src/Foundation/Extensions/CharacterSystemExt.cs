@@ -25,7 +25,7 @@ namespace vsroleplayraces.src.Foundation.Extensions
                 FlawId = flawid,
                 BondId = bondid,
                 RoleplayForename = roleplayForename,
-                RoleplaySurname = roleplaySurname
+                RoleplaySurname = roleplaySurname,
             }) ;
         }
     }
