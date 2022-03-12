@@ -56,6 +56,7 @@ namespace vsroleplayraces.src
         [HarmonyPrefix]
         public static bool Prefix(CharacterSystem __instance, IClientPlayer byPlayer)
         {
+            if (byPlayer.Entity != null)
             if (byPlayer.Entity.Api is ICoreClientAPI)
             {
                 FieldInfo fieldInfo = typeof(CharacterSystem).GetField("didSelect", BindingFlags.NonPublic |

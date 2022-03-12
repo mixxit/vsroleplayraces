@@ -4,12 +4,12 @@
     "name": "vsroleplayraces",
     "author": "mixxit",
     "description": "A vintage story mod that adds roleplay races",
-    "version": "1.16.4-rc.1",
+    "version": "1.16.4-rc.2",
     "requiredOnClient": "true",
     "requiredOnServer": "true",
     "dependency": {
         "game": "1.16.4",
         "survival": "1.16.4",
-        "vsroleplayclasses": "1.16.4-rc.6"
+        "vsroleplayclasses": "1.16.4-rc.11"
     }
 }
