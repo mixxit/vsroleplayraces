@@ -440,6 +440,9 @@ namespace vsroleplayraces.src
 
         private void OnPlayerJoinedClient(IClientPlayer player)
         {
+            if (player.Entity == null)
+                return;
+
             RegisterPlayerNameChangedListener((EntityPlayer)player.Entity);
             TryUpdatePlayerEntityName((EntityPlayer)player.Entity);
         }
