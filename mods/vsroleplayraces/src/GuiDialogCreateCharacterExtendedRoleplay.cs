@@ -14,6 +14,10 @@ using vsroleplayraces.src.Foundation.Extensions;
 
 namespace vsroleplayraces.src
 {
+    // Original of this can be found here after VS patches:
+    // https://github.com/anegostudios/vssurvivalmod/blob/6ba2ff2c7c93cea8dc2f535646a79ff4dbc4669a/Gui/GuiDialogCreateCharacter.cs#L13
+    // Point of this is to extend the dialog with more tabs
+    // Last time tyronx changed this was 23 jan of 2022
     public class GuiDialogCreateCharacterExtendedRoleplay : GuiDialog
     {
         bool didSelect = false;

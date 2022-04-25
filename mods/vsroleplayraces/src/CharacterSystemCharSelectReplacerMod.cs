@@ -53,6 +53,9 @@ namespace vsroleplayraces.src
     [HarmonyPatch(typeof(CharacterSystem), "Event_PlayerJoin")]
     public class CharacterSystemPatch_Event_PlayerJoin
     {
+        // Original of this can be found here when updating vintagestory
+        // https://github.com/anegostudios/vssurvivalmod/blob/master/Systems/Character/Character.cs
+        // Point of this is to replace the GuiDialogCreateCharacter with a new one
         [HarmonyPrefix]
         public static bool Prefix(CharacterSystem __instance, IClientPlayer byPlayer)
         {
